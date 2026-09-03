@@ -38,27 +38,45 @@ def main():
     from google_auth_oauthlib.flow import InstalledAppFlow
 
     client_file = os.environ.get("GSC_OAUTH_CLIENT_FILE", "").strip()
-    if not client_file:
-        print("⚠ ENV GSC_OAUTH_CLIENT_FILE не задан.")
-        print("  Положи скачанный из Google Cloud Console JSON в seo-agent/secrets/")
-        print("  и пропиши путь: GSC_OAUTH_CLIENT_FILE=secrets/gsc-oauth-client.json")
+    client_id = os.environ.get("GSC_OAUTH_CLIENT_ID", "").strip()
+    client_secret = os.environ.get("GSC_OAUTH_CLIENT_SECRET", "").strip()
+    client_data = None
+    p = None
+
+    if client_file:
+        p = Path(client_file)
+        if not p.is_absolute():
+            p = Path(__file__).resolve().parents[1] / p
+        if not p.exists():
+            print(f"⚠ Файл не найден: {p}")
+            sys.exit(1)
+        with open(p, encoding="utf-8") as f:
+            client_data = json.load(f)
+        print(f"→ Запускаю OAuth-флоу с {p}")
+    elif client_id and client_secret:
+        client_data = {
+            "installed": {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": ["http://localhost"],
+            }
+        }
+        print("→ Запускаю OAuth-флоу из GSC_OAUTH_CLIENT_ID / GSC_OAUTH_CLIENT_SECRET")
+    else:
+        print("⚠ Нет OAuth-клиента.")
+        print("  Либо GSC_OAUTH_CLIENT_FILE=secrets/gsc-oauth-client.json")
+        print("  либо GSC_OAUTH_CLIENT_ID + GSC_OAUTH_CLIENT_SECRET.")
         sys.exit(1)
 
-    p = Path(client_file)
-    if not p.is_absolute():
-        p = Path(__file__).resolve().parents[1] / p
-    if not p.exists():
-        print(f"⚠ Файл не найден: {p}")
-        sys.exit(1)
-
-    print(f"→ Запускаю OAuth-флоу с {p}")
     print("→ Сейчас откроется браузер. Войди в Google-аккаунт, который владеет GSC,")
     print("  и нажми «Allow» на странице согласия. Если страница покажет «App not")
     print("  verified» — нажми «Advanced → Go to seo-agent (unsafe)» (это нормально")
     print("  для своего же приложения в режиме Testing).")
     print()
 
-    flow = InstalledAppFlow.from_client_secrets_file(str(p), SCOPES)
+    flow = InstalledAppFlow.from_client_config(client_data, SCOPES)
     creds = flow.run_local_server(port=0, prompt="consent", access_type="offline")
 
     print("\n✓ Авторизация прошла.")
@@ -73,19 +91,18 @@ def main():
     keys_to_remove = {"GSC_OAUTH_REFRESH_TOKEN", "GSC_OAUTH_CLIENT_ID", "GSC_OAUTH_CLIENT_SECRET"}
     lines = [ln for ln in lines if not any(ln.startswith(k + "=") for k in keys_to_remove)]
 
-    # Читаем client_id/secret из исходного JSON
-    with open(p) as f:
-        client_data = json.load(f)
     if "installed" in client_data:
-        client_data = client_data["installed"]
+        oauth_client = client_data["installed"]
     elif "web" in client_data:
-        client_data = client_data["web"]
+        oauth_client = client_data["web"]
+    else:
+        oauth_client = client_data
 
     lines.append("")
     lines.append("# GSC OAuth (получено через gsc_oauth_setup.py)")
     lines.append(f"GSC_OAUTH_REFRESH_TOKEN={creds.refresh_token}")
-    lines.append(f"GSC_OAUTH_CLIENT_ID={client_data['client_id']}")
-    lines.append(f"GSC_OAUTH_CLIENT_SECRET={client_data['client_secret']}")
+    lines.append(f"GSC_OAUTH_CLIENT_ID={oauth_client['client_id']}")
+    lines.append(f"GSC_OAUTH_CLIENT_SECRET={oauth_client['client_secret']}")
     env_path.write_text("\n".join(lines) + "\n")
     print(f"✓ Записано в {env_path}")
     print("→ Теперь можно прогонять modules/gsc_client.py — должен видеть property и данные.")

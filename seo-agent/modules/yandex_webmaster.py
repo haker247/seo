@@ -178,6 +178,32 @@ if __name__ == "__main__":
     import datetime as dt
     logging.basicConfig(level=logging.INFO)
 
+    def _needles() -> list[str]:
+        found: list[str] = []
+        for raw in (
+            os.environ.get("SEO_SITE_DOMAIN", ""),
+            os.environ.get("INDEXNOW_HOST", ""),
+            os.environ.get("GSC_SITE_URL", "").replace("sc-domain:", "").rstrip("/"),
+        ):
+            v = raw.strip()
+            if not v:
+                continue
+            found.append(v)
+            try:
+                found.append(v.encode("ascii").decode("idna"))
+            except (UnicodeError, UnicodeDecodeError, LookupError):
+                pass
+            try:
+                found.append(v.encode("idna").decode("ascii"))
+            except (UnicodeError, UnicodeDecodeError, LookupError):
+                pass
+        # unique, keep order
+        out: list[str] = []
+        for n in found:
+            if n and n not in out:
+                out.append(n)
+        return out
+
     print("→ Получаю user_id...")
     user_id = yw_get_user_id()
     print(f"  user_id = {user_id}")
@@ -188,18 +214,24 @@ if __name__ == "__main__":
         print("  ⚠ Список пуст. Проверь, что токен выдан для нужного аккаунта.")
         raise SystemExit(0)
 
+    needles = _needles()
     ped_host_id = None
+    ped_url = None
     for h in hosts:
         verified = "✓" if h.get("verified") else "✗"
-        print(f"  {verified} {h['unicode_host_url']}  (host_id={h['host_id']})")
-        if "example.com" in h["unicode_host_url"]:
+        url = h.get("unicode_host_url") or h.get("ascii_host_url") or ""
+        print(f"  {verified} {url}  (host_id={h['host_id']})")
+        blob = (h.get("unicode_host_url") or "") + " " + (h.get("ascii_host_url") or "")
+        if any(n in blob for n in needles):
             ped_host_id = h["host_id"]
+            ped_url = url
 
     if not ped_host_id:
-        print("\n⚠ example.com не найден в списке. Подключи сайт в Я.Вебмастере.")
-        raise SystemExit(0)
+        print(f"\n⚠ Сайт {needles or '(SEO_SITE_DOMAIN не задан)'} не найден в списке.")
+        print("  Подключи сайт в Я.Вебмастере.")
+        raise SystemExit(1)
 
-    print(f"\n=== Сводка для example.com (host_id={ped_host_id}) ===")
+    print(f"\n=== Сводка для {ped_url} (host_id={ped_host_id}) ===")
     info = yw_host_info(user_id, ped_host_id)
     print(f"  Верификация: {info.get('verified')}")
     print(f"  Главное зеркало: {info.get('main_mirror_host_id') or '—'}")

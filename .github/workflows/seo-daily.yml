@@ -5,13 +5,8 @@ name: seo-agent · daily morning digest
 # Шаги: быстрый мини-аудит M2 (без PageSpeed) → сборка дайджеста → Telegram.
 
 on:
-# ⚠️ Расписание ОТКЛЮЧЕНО. Это публичный репозиторий-ШАБЛОН: секретов с боевыми
-# ключами тут нет, и кроны гоняли агентов по плейсхолдерам — падали каждый день
-# и слали письма ни о чём. Решение зафиксировано в июле 2026, но расписания
-# вернулись; выключены повторно 2026-08-09. Форкнул себе — раскомментируй и
-# положи свои секреты. Ручной запуск (workflow_dispatch) работает всегда.
-  # schedule:
-  # - cron: "30 5 * * *"
+  schedule:
+    - cron: "30 5 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -52,6 +47,11 @@ jobs:
           pip install -r requirements.txt
           pip install lxml
 
+      - name: Install Cursor CLI
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.cursor/bin" >> "$GITHUB_PATH"
+
       - name: Configure git author
         run: |
           git config user.email "bot@example.com"
@@ -64,6 +64,8 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ""
           TELEGRAM_CHAT_ID: ""
+          M2_SITE_ROOT: https://xn--b1adafaol8cdkl0m.xn--p1acf
+          SEO_SITE_DOMAIN: xn--b1adafaol8cdkl0m.xn--p1acf
         run: |
           python3 orchestrator.py m2 --skip-psi --dry-run || true
 
@@ -73,12 +75,14 @@ jobs:
           GSC_OAUTH_REFRESH_TOKEN: ${{ secrets.GSC_OAUTH_REFRESH_TOKEN }}
           GSC_OAUTH_CLIENT_ID: ${{ secrets.GSC_OAUTH_CLIENT_ID }}
           GSC_OAUTH_CLIENT_SECRET: ${{ secrets.GSC_OAUTH_CLIENT_SECRET }}
-          GSC_SITE_URL: sc-domain:example.com
-          SEO_SITE_DOMAIN: example.com
+          GSC_SITE_URL: https://xn--b1adafaol8cdkl0m.xn--p1acf/
+          SEO_SITE_DOMAIN: xn--b1adafaol8cdkl0m.xn--p1acf
+          M2_SITE_ROOT: https://xn--b1adafaol8cdkl0m.xn--p1acf
           YANDEX_WEBMASTER_TOKEN: ${{ secrets.YANDEX_WEBMASTER_TOKEN }}
           YANDEX_WEBMASTER_USER_ID: ${{ secrets.YANDEX_WEBMASTER_USER_ID }}
           YANDEX_WEBMASTER_HOST_ID: ${{ secrets.YANDEX_WEBMASTER_HOST_ID }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          CURSOR_MODEL: composer-2.5
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}

@@ -2,40 +2,23 @@
 SEO-стратег — человеческие рекомендации поверх сухих данных дайджеста.
 
 Берёт payload ежедневного/недельного дайджеста (трафик, позиции, тех-аудит,
-Вебмастер, публикации) и просит Claude сформулировать 3–5 приоритетов на сегодня
+Вебмастер, публикации) и просит модель сформулировать 3–5 приоритетов на сегодня
 живым языком: что улучшить, над чем поработать. Без жаргона, без кодов модулей.
 
-Запускается в GitHub Actions (вне РФ — Anthropic API доступен). Если ключа нет
-или SDK не установлен — молча возвращает пустую строку, отчёт всё равно уходит.
+Запускается в GitHub Actions через Cursor SDK. Если CURSOR_API_KEY нет —
+молча возвращает пустую строку, отчёт всё равно уходит.
 
 ENV:
-    ANTHROPIC_API_KEY — тот же ключ, что у content-factory / M1.
-    ANTHROPIC_MODEL   — по умолчанию claude-sonnet-4-6.
+    CURSOR_API_KEY — ключ Cursor (Dashboard → API Keys).
+    CURSOR_MODEL   — по умолчанию composer-2.5.
 """
 
 from __future__ import annotations
 
-import json
 import logging
-import os
 import re
-import sys
-from pathlib import Path
-from typing import Optional
 
 log = logging.getLogger(__name__)
-
-# Учёт расхода LLM. Модуль лежит в content-factory/ — берём ОТТУДА, а не копией
-# рядом: леджер на весь пакет должен быть один файл
-# (content-factory/data/budget/usage.jsonl), иначе расход придётся складывать
-# из двух мест.
-_CONTENT_FACTORY = Path(__file__).resolve().parent.parent.parent / "content-factory"
-if str(_CONTENT_FACTORY) not in sys.path:
-    sys.path.insert(0, str(_CONTENT_FACTORY))
-try:
-    import usage_ledger
-except ImportError:  # content-factory/ рядом нет — работаем без учёта
-    usage_ledger = None
 
 SYSTEM_PROMPT = (
     "Ты — опытный SEO-стратег, который ведёт сайт клиента и каждое утро пишет ему "
@@ -129,15 +112,10 @@ def _payload_to_brief(site: str, period: str, payload: dict) -> str:
 def strategist_advice(site: str, period: str, payload: dict,
                       max_points: int = 5) -> str:
     """Вернуть текст рекомендаций (нумерованный список) или "" при недоступности."""
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-    if not api_key:
-        log.info("ANTHROPIC_API_KEY не задан — блок стратега пропущен")
-        return ""
+    from modules.llm import complete, configured
 
-    try:
-        import anthropic
-    except ImportError:
-        log.warning("anthropic SDK не установлен — блок стратега пропущен")
+    if not configured():
+        log.info("CURSOR_API_KEY не задан — блок стратега пропущен")
         return ""
 
     brief = _payload_to_brief(site, period, payload)
@@ -147,25 +125,17 @@ def strategist_advice(site: str, period: str, payload: dict,
         f"Сформулируй до {max_points} приоритетов на сегодня по правилам из инструкции."
     )
 
-    client = anthropic.Anthropic(api_key=api_key)
-    model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
     try:
-        response = client.messages.create(
-            model=model,
+        text = complete(
+            SYSTEM_PROMPT,
+            user_prompt,
+            note=f"стратег: {site} / {period}",
             max_tokens=1200,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_prompt}],
         )
     except Exception as e:
-        log.warning("Claude (стратег) недоступен: %s", e)
+        log.warning("Cursor (стратег) недоступен: %s", e)
         return ""
 
-    if usage_ledger is not None:
-        usage_ledger.record_response(model, getattr(response, "usage", None),
-                                     note=f"стратег: {site} / {period}")
-
-    text = response.content[0].text.strip() if response.content else ""
-    # На всякий случай снимаем markdown-обёртку, если модель её добавила.
     if text.startswith("```"):
         text = re.sub(r"^```[a-zA-Z]*\s*", "", text)
         text = re.sub(r"\s*```\s*$", "", text)

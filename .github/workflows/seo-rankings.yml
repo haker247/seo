@@ -4,13 +4,8 @@ name: seo-agent · M3 rank tracker
 # Cron: каждый день 03:00 UTC = 06:00 МСК (свежие данные GSC, после ночного обновления).
 
 on:
-# ⚠️ Расписание ОТКЛЮЧЕНО. Это публичный репозиторий-ШАБЛОН: секретов с боевыми
-# ключами тут нет, и кроны гоняли агентов по плейсхолдерам — падали каждый день
-# и слали письма ни о чём. Решение зафиксировано в июле 2026, но расписания
-# вернулись; выключены повторно 2026-08-09. Форкнул себе — раскомментируй и
-# положи свои секреты. Ручной запуск (workflow_dispatch) работает всегда.
-  # schedule:
-  # - cron: "0 3 * * *"
+  schedule:
+    - cron: "0 3 * * *"
   workflow_dispatch:
     inputs:
       refresh_seeds:
@@ -65,7 +60,8 @@ jobs:
           GSC_OAUTH_REFRESH_TOKEN: ${{ secrets.GSC_OAUTH_REFRESH_TOKEN }}
           GSC_OAUTH_CLIENT_ID: ${{ secrets.GSC_OAUTH_CLIENT_ID }}
           GSC_OAUTH_CLIENT_SECRET: ${{ secrets.GSC_OAUTH_CLIENT_SECRET }}
-          GSC_SITE_URL: sc-domain:example.com
+          GSC_SITE_URL: https://xn--b1adafaol8cdkl0m.xn--p1acf/
+          SEO_SITE_DOMAIN: xn--b1adafaol8cdkl0m.xn--p1acf
           TOPVISOR_API_TOKEN: ${{ secrets.TOPVISOR_API_TOKEN }}
           TOPVISOR_PROJECT_ID: ${{ secrets.TOPVISOR_PROJECT_ID }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}

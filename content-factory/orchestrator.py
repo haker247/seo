@@ -22,7 +22,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from anthropic import Anthropic
 from dotenv import load_dotenv
 
 import circuit_breaker
@@ -49,15 +48,17 @@ USED_PATH = DATA / "topics_used.csv"
 # (budget/usage.jsonl, circuit_breaker.json).
 LOCK_PATH = DATA / ".fill.lock"
 
-ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
-MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
+_SEO_AGENT = ROOT.parent / "seo-agent"
+if str(_SEO_AGENT) not in sys.path:
+    sys.path.insert(0, str(_SEO_AGENT))
+from modules.llm import complete as call_llm, configured as llm_configured, model_id  # noqa: E402
+
+MODEL = model_id()
 ARTICLES_PER_DAY = int(os.environ.get("ARTICLES_PER_DAY", "5"))
 ENABLE_EDITOR_PASS = os.environ.get("ENABLE_EDITOR_PASS", "true").lower() == "true"
 
-# Batch API: −50% на токены (запуск раз в день не критичен по латентности).
-# Статьи независимы, поэтому гоняем по стадиям: 5 брифов → 5 текстов → 5 редактур.
-# Внутри стадии общий system-промпт кэшируется (prompt caching). USE_BATCH=false
-# мгновенно возвращает старый последовательный режим. См. docs/seo (changelog).
+# Стадийная генерация (брифы → тексты → редактура). Без Anthropic Batch API:
+# каждая стадия — последовательные вызовы Cursor SDK.
 USE_BATCH = os.environ.get("USE_BATCH", "true").lower() == "true"
 BATCH_POLL_INTERVAL = int(os.environ.get("BATCH_POLL_INTERVAL", "20"))   # сек между опросами
 BATCH_MAX_WAIT = int(os.environ.get("BATCH_MAX_WAIT", "5400"))           # макс. ожидание стадии, сек
@@ -86,8 +87,6 @@ logging.basicConfig(
     ],
 )
 log = logging.getLogger("orchestrator")
-
-client = Anthropic(api_key=ANTHROPIC_API_KEY)
 
 
 # ── Модели данных ─────────────────────────────────────────────────────
@@ -205,68 +204,25 @@ def pick_topics(n: int) -> list[Topic]:
     return candidates[:n]
 
 
-# ── Промпты и вызов Claude ────────────────────────────────────────────
+# ── Промпты и вызов Cursor ────────────────────────────────────────────
 def read_prompt(name: str) -> str:
     return (PROMPTS / name).read_text(encoding="utf-8")
 
 
 # ── Учёт расхода (usage_ledger) ───────────────────────────────────────
-# Каждый вызов Claude пишется строкой в data/budget/usage.jsonl. Это ТОЛЬКО
+# Каждый вызов Cursor пишется строкой в data/budget/usage.jsonl. Это ТОЛЬКО
 # видимость: сколько токенов и долларов ушло за день/неделю, во что обходится
 # одна статья. Никаких лимитов и остановок тут нет — см. usage_ledger.py.
 
-def _usage_fields(usage) -> tuple[int, int, int, int]:
-    """(вход, выход, чтение кэша, запись кэша) из объекта usage ответа Anthropic."""
-    if usage is None:
-        return 0, 0, 0, 0
-    return (
-        getattr(usage, "input_tokens", 0) or 0,
-        getattr(usage, "output_tokens", 0) or 0,
-        getattr(usage, "cache_read_input_tokens", 0) or 0,
-        getattr(usage, "cache_creation_input_tokens", 0) or 0,
-    )
-
-
-def _record_usage(input_tokens: int, output_tokens: int,
-                  cache_read: int = 0, cache_creation: int = 0,
-                  batch: bool = False, note: str = "") -> None:
-    """Дописывает расход одного вызова (или одного батча) в леджер."""
-    usage_ledger.record(
-        model=MODEL,
-        backend="anthropic-batch" if batch else "anthropic-api",
-        input_tokens=input_tokens,
-        output_tokens=output_tokens,
-        cache_read_tokens=cache_read,
-        cache_creation_tokens=cache_creation,
-        cost_usd=usage_ledger.estimate_cost(
-            MODEL, input_tokens, output_tokens, cache_read, cache_creation, batch=batch,
-        ),
-        # Обычный API-ключ — это реальные деньги по счётчику.
-        metered=True,
-        note=note,
-    )
-
-
 def call_claude(system: str, user: str, max_tokens: int = 8000) -> str:
-    """Один вызов Claude Sonnet с retry на сетевые ошибки."""
+    """Один вызов Cursor SDK с retry на сетевые ошибки."""
     last_err = None
     for attempt in range(3):
         try:
-            resp = client.messages.create(
-                model=MODEL,
-                max_tokens=max_tokens,
-                system=system,
-                messages=[{"role": "user", "content": user}],
-            )
-            inp, out, c_read, c_write = _usage_fields(getattr(resp, "usage", None))
-            _record_usage(inp, out, c_read, c_write)
-            return resp.content[0].text
+            return call_llm(system, user, note="content-factory", max_tokens=max_tokens)
         except Exception as e:  # noqa: BLE001
             last_err = e
-            log.warning("Claude call failed (attempt %d/3): %s", attempt + 1, e)
-            # Предохранитель от рантвея: считаем ВСЕ повторы за сутки по фабрике.
-            # Штатный день — единицы повторов; десятки означают, что что-то
-            # залипло и прогон жжёт токены впустую.
+            log.warning("Cursor call failed (attempt %d/3): %s", attempt + 1, e)
             if circuit_breaker.record_retry():
                 log.error("предохранитель: повторов за сутки больше %d — прекращаю "
                           "(счётчик и сброс: content-factory/data/circuit_breaker.json)",
@@ -276,7 +232,7 @@ def call_claude(system: str, user: str, max_tokens: int = 8000) -> str:
                     f"({circuit_breaker.MAX_RETRY_LOOP}); последняя ошибка: {last_err}"
                 ) from last_err
             time.sleep(2 ** attempt)
-    raise RuntimeError(f"Claude call failed after 3 attempts: {last_err}")
+    raise RuntimeError(f"Cursor call failed after 3 attempts: {last_err}")
 
 
 # Построители user-сообщений и парсер брифа — общие для последовательного
@@ -328,68 +284,22 @@ def edit_article_mdx(mdx: str) -> str:
     return raw.strip()
 
 
-# ── Batch API: стадийная генерация (−50% на токенах) ──────────────────
+# ── Стадийная генерация (последовательные вызовы Cursor) ────────────
 def run_stage_batch(label: str, system_text: str, jobs: list[tuple[str, str]],
                     max_tokens: int) -> dict[str, Optional[str]]:
-    """Один батч на стадию. Все запросы делят общий system (кэшируется → reads
-    со 2-го запроса). jobs = [(custom_id, user_text)]. Возвращает {custom_id: text|None}.
-    """
+    """Одна стадия: jobs = [(custom_id, user_text)]. Возвращает {custom_id: text|None}."""
     if not jobs:
         return {}
-    # cache_control на system: внутри батча 5 одинаковых system-префиксов →
-    # 1 запись + 4 чтения по ~10% цены. На 03 (короткий) кэш может не сработать
-    # (ниже минимума Sonnet) — это ок, просто не даст экономии.
-    system_block = [{"type": "text", "text": system_text, "cache_control": {"type": "ephemeral"}}]
-    requests = [
-        {
-            "custom_id": cid,
-            "params": {
-                "model": MODEL,
-                "max_tokens": max_tokens,
-                "system": system_block,
-                "messages": [{"role": "user", "content": user}],
-            },
-        }
-        for cid, user in jobs
-    ]
-    log.info("Batch[%s]: отправляю %d запросов...", label, len(requests))
-    batch = client.messages.batches.create(requests=requests)
-
-    waited = 0
-    while True:
-        b = client.messages.batches.retrieve(batch.id)
-        if b.processing_status == "ended":
-            break
-        if waited >= BATCH_MAX_WAIT:
-            raise RuntimeError(
-                f"Batch[{label}] не завершился за {BATCH_MAX_WAIT}s (status={b.processing_status})"
-            )
-        time.sleep(BATCH_POLL_INTERVAL)
-        waited += BATCH_POLL_INTERVAL
-
+    log.info("Stage[%s]: %d запросов через Cursor SDK...", label, len(jobs))
     out: dict[str, Optional[str]] = {}
-    # Расход по батчу. Anthropic отдаёт usage на КАЖДЫЙ успешный item
-    # (r.result.message.usage), но писать в леджер по строке на статью — шум:
-    # складываем и пишем одну строку на всю стадию батча.
-    tok_in = tok_out = tok_cache_read = tok_cache_write = 0
-    for r in client.messages.batches.results(batch.id):
-        if r.result.type == "succeeded":
-            msg = r.result.message
-            out[r.custom_id] = next((blk.text for blk in msg.content if blk.type == "text"), "")
-            i, o, cr, cw = _usage_fields(getattr(msg, "usage", None))
-            tok_in += i
-            tok_out += o
-            tok_cache_read += cr
-            tok_cache_write += cw
-        else:
-            out[r.custom_id] = None
-            log.warning("Batch[%s]: %s → %s", label, r.custom_id, r.result.type)
+    for cid, user in jobs:
+        try:
+            out[cid] = call_claude(system_text, user, max_tokens=max_tokens)
+        except Exception as e:  # noqa: BLE001
+            out[cid] = None
+            log.warning("Stage[%s]: %s → %s", label, cid, e)
     ok = sum(1 for v in out.values() if v)
-    # batch=True → цена считается с батчевой скидкой −50%.
-    _record_usage(tok_in, tok_out, tok_cache_read, tok_cache_write, batch=True,
-                  note=f"batch mode, агрегированная запись: стадия {label}, "
-                       f"{ok}/{len(requests)} успешно")
-    log.info("Batch[%s]: готово — %d/%d успешно", label, ok, len(requests))
+    log.info("Stage[%s]: готово — %d/%d успешно", label, ok, len(jobs))
     return out
 
 
@@ -638,6 +548,9 @@ def _run() -> int:
     report = RunReport(started_at=started)
 
     log.info("=== content-factory: запуск %s ===", publish_date)
+    if not llm_configured():
+        log.error("CURSOR_API_KEY не задан")
+        return 2
 
     try:
         ensure_site_repo()

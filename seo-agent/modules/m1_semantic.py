@@ -7,7 +7,7 @@ M1 — Semantic collector.
   3. Дедуплицирует и фильтрует шум (≥3 показов).
   4. Сравнивает с уже использованными темами (content-factory/data/topics_used.csv)
      и текущим бэклогом (topics_backlog.csv).
-  5. Группирует новые запросы по кластерам через Claude API.
+  5. Группирует новые запросы по кластерам через Cursor SDK.
   6. Записывает новые темы в content-factory/data/topics_backlog.csv.
 
 Запуск:
@@ -18,7 +18,7 @@ M1 — Semantic collector.
 ENV:
     GSC_OAUTH_REFRESH_TOKEN, GSC_OAUTH_CLIENT_ID, GSC_OAUTH_CLIENT_SECRET
     YANDEX_WEBMASTER_TOKEN
-    ANTHROPIC_API_KEY
+    CURSOR_API_KEY
     TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID (опц.)
 """
 
@@ -51,17 +51,6 @@ CONTENT_FACTORY = REPO_ROOT / "content-factory" / "data"
 BACKLOG_CSV = CONTENT_FACTORY / "topics_backlog.csv"
 USED_CSV = CONTENT_FACTORY / "topics_used.csv"
 SEMANTIC_DIR = THIS_DIR.parent / "data" / "semantic"
-
-# Учёт расхода LLM. Модуль лежит в content-factory/ — берём ОТТУДА, а не копией
-# рядом: леджер на весь пакет должен быть один файл
-# (content-factory/data/budget/usage.jsonl), иначе расход придётся складывать
-# из двух мест. Путь добавляем так же, как выше добавлен корень seo-agent.
-if str(REPO_ROOT / "content-factory") not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT / "content-factory"))
-try:
-    import usage_ledger  # noqa: E402
-except ImportError:  # content-factory/ рядом нет — работаем без учёта
-    usage_ledger = None
 
 # Категории, в которые M1 может класть темы — должны совпадать с content-factory.
 KNOWN_CATEGORIES = {"admission", "career", "dictionary", "extra", "preschool", "primary", "profession"}
@@ -274,9 +263,10 @@ Intent: informational | commercial | transactional.
 
 
 def cluster_with_claude(queries: dict[str, QueryStat], max_topics: int = MAX_NEW_TOPICS_PER_RUN) -> list[dict]:
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-    if not api_key:
-        log.error("ANTHROPIC_API_KEY не задан — кластеризация невозможна")
+    from modules.llm import complete, configured
+
+    if not configured():
+        log.error("CURSOR_API_KEY не задан — кластеризация невозможна")
         return []
 
     # Отбираем top-N query по показам — больше отдавать в LLM нет смысла
@@ -290,30 +280,17 @@ def cluster_with_claude(queries: dict[str, QueryStat], max_topics: int = MAX_NEW
         f"\n\nСгруппируй в кластеры и верни до {max_topics} тем. Только валидный JSON, без markdown-обёртки."
     )
 
+    log.info("Cursor кластеризация %d query (отобрано из %d)...", len(sorted_qs), len(queries))
     try:
-        import anthropic
-    except ImportError:
-        log.error("anthropic SDK не установлен — pip install anthropic")
-        return []
-
-    client = anthropic.Anthropic(api_key=api_key)
-    model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
-    log.info("Claude кластеризация %d query (отобрано из %d)...", len(sorted_qs), len(queries))
-    try:
-        response = client.messages.create(
-            model=model,
+        text = complete(
+            "Верни только JSON-массив тем, без пояснений.",
+            user_prompt,
+            note="M1: кластеризация семантики",
             max_tokens=8000,
-            messages=[{"role": "user", "content": user_prompt}],
         )
     except Exception as e:
-        log.error("Claude API error: %s", e)
+        log.error("Cursor SDK error: %s", e)
         return []
-
-    if usage_ledger is not None:
-        usage_ledger.record_response(model, getattr(response, "usage", None),
-                                     note="M1: кластеризация семантики")
-
-    text = response.content[0].text.strip() if response.content else ""
     # Иногда модель оборачивает в ```json — снимаем
     if text.startswith("```"):
         text = re.sub(r"^```(?:json)?\s*", "", text)
@@ -322,11 +299,11 @@ def cluster_with_claude(queries: dict[str, QueryStat], max_topics: int = MAX_NEW
     try:
         topics = json.loads(text)
     except json.JSONDecodeError as e:
-        log.error("Claude ответ не парсится как JSON: %s\n%s", e, text[:500])
+        log.error("Ответ не парсится как JSON: %s\n%s", e, text[:500])
         return []
 
     if not isinstance(topics, list):
-        log.error("Claude вернул не массив: %s", type(topics))
+        log.error("Модель вернула не массив: %s", type(topics))
         return []
 
     # Валидация полей
@@ -341,7 +318,7 @@ def cluster_with_claude(queries: dict[str, QueryStat], max_topics: int = MAX_NEW
             continue
         valid_topics.append(t)
 
-    log.info("Claude вернул %d валидных кластеров (из %d сырых)", len(valid_topics), len(topics))
+    log.info("Модель вернула %d валидных кластеров (из %d сырых)", len(valid_topics), len(topics))
     valid_topics = valid_topics[:max_topics]
     enrich_frequency(valid_topics)
     return valid_topics
