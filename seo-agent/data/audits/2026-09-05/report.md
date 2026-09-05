@@ -2,20 +2,10 @@
 
 **Краулинг:** 401 страниц · 2xx 401 · 3xx 0 · 4xx 0 · 5xx 0 · network errors 0
 
-**Issues:** critical 4 · high 14 · medium 239 · low 8
+**Issues:** critical 0 · high 13 · medium 239 · low 8
 
 
-## CRITICAL (4)
-
-
-### psi_lcp_slow_mobile (4)
-
-- `https://xn--b1adafaol8cdkl0m.xn--p1acf/doshkolnoe` — LCP mobile=10367ms (порог 2500ms)
-- `https://xn--b1adafaol8cdkl0m.xn--p1acf/dopolnitelnoe` — LCP mobile=10443ms (порог 2500ms)
-- `https://xn--b1adafaol8cdkl0m.xn--p1acf/postuplenie` — LCP mobile=7108ms (порог 2500ms)
-- `https://xn--b1adafaol8cdkl0m.xn--p1acf/kontakty` — LCP mobile=7116ms (порог 2500ms)
-
-## HIGH (14)
+## HIGH (13)
 
 
 ### description_missing (7)
@@ -36,10 +26,6 @@
 - `https://xn--b1adafaol8cdkl0m.xn--p1acf/works-album.html?id=4` — тот же <title> ещё на 5 стр: https://xn--b1adafaol8cdkl0m.xn--p1acf/works-album.html?id=1 и ещё 4
 - `https://xn--b1adafaol8cdkl0m.xn--p1acf/works-album.html?id=5` — тот же <title> ещё на 5 стр: https://xn--b1adafaol8cdkl0m.xn--p1acf/works-album.html?id=1 и ещё 4
 - `https://xn--b1adafaol8cdkl0m.xn--p1acf/works-album.html?id=6` — тот же <title> ещё на 5 стр: https://xn--b1adafaol8cdkl0m.xn--p1acf/works-album.html?id=1 и ещё 4
-
-### psi_lcp_slow_mobile (1)
-
-- `https://xn--b1adafaol8cdkl0m.xn--p1acf/nachalnoe` — LCP mobile=2867ms (порог 2500ms)
 
 ## MEDIUM (239)
 
@@ -305,27 +291,3 @@
 - `https://xn--b1adafaol8cdkl0m.xn--p1acf/product/877-aliot-purple` — desc=67 символов, рекомендуется ≥70
 - `https://xn--b1adafaol8cdkl0m.xn--p1acf/product/878-aliot-mokko` — desc=66 символов, рекомендуется ≥70
 - `https://xn--b1adafaol8cdkl0m.xn--p1acf/product/901-skani-belaya` — desc=66 символов, рекомендуется ≥70
-
-## PageSpeed Insights
-
-
-| URL | Strategy | LCP | INP | CLS | Perf |
-|---|---|---|---|---|---|
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/` | mobile | error | | | |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/` | desktop | 3.55s | — | 0.007 | 75 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/doshkolnoe` | mobile | 10.37s | — | 0.000 | 65 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/doshkolnoe` | desktop | 1.01s | — | 0.007 | 98 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/nachalnoe` | mobile | 2.87s | — | 0.005 | 89 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/nachalnoe` | desktop | 0.99s | — | 0.007 | 98 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/dopolnitelnoe` | mobile | 10.44s | — | 0.000 | 66 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/dopolnitelnoe` | desktop | error | | | |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/spetsialnosti` | mobile | error | | | |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/spetsialnosti` | desktop | 1.08s | — | 0.007 | 96 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/blog` | mobile | error | | | |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/blog` | desktop | 1.00s | — | 0.007 | 95 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/faq` | mobile | error | | | |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/faq` | desktop | 0.73s | — | 0.007 | 99 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/postuplenie` | mobile | 7.11s | — | 0.000 | 66 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/postuplenie` | desktop | 0.99s | — | 0.007 | 98 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/kontakty` | mobile | 7.12s | — | 0.001 | 66 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/kontakty` | desktop | 0.99s | — | 0.007 | 98 |
