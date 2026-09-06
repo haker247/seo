@@ -1,0 +1,80 @@
+{
+  "date": "2026-09-06",
+  "queries_count": 8,
+  "topics_added": 1,
+  "queries": [
+    {
+      "text": "двери балаково",
+      "impressions": 17,
+      "clicks": 3,
+      "position": 5.470588235294118,
+      "source": "gsc"
+    },
+    {
+      "text": "установка дверей балаково",
+      "impressions": 7,
+      "clicks": 0,
+      "position": 11.857142857142858,
+      "source": "gsc"
+    },
+    {
+      "text": "склад дверей фото",
+      "impressions": 5,
+      "clicks": 1,
+      "position": 4.8,
+      "source": "gsc"
+    },
+    {
+      "text": "межкомнатные двери балаково",
+      "impressions": 5,
+      "clicks": 0,
+      "position": 9.4,
+      "source": "gsc"
+    },
+    {
+      "text": "двери межкомнатные",
+      "impressions": 4,
+      "clicks": 0,
+      "position": 10.25,
+      "source": "gsc"
+    },
+    {
+      "text": "входные двери балаково",
+      "impressions": 3,
+      "clicks": 0,
+      "position": 12.666666666666666,
+      "source": "gsc"
+    },
+    {
+      "text": "дверь входная",
+      "impressions": 3,
+      "clicks": 0,
+      "position": 10.666666666666666,
+      "source": "gsc"
+    },
+    {
+      "text": "магазин склад дверей",
+      "impressions": 3,
+      "clicks": 0,
+      "position": 6.0,
+      "source": "gsc"
+    }
+  ],
+  "topics": [
+    {
+      "topic": "Склад дверей: как устроен магазин и на что смотреть при выборе",
+      "primary_keyword": "склад дверей",
+      "secondary_keywords": "магазин склад дверей, склад дверей фото, выбор дверей",
+      "intent": "informational",
+      "category": "dictionary",
+      "wordstat_frequency": 0,
+      "competitor_refs": "",
+      "priority": 4,
+      "_source_queries": [
+        "склад дверей фото",
+        "магазин склад дверей"
+      ],
+      "_total_impressions": 8
+    }
+  ]
+}
