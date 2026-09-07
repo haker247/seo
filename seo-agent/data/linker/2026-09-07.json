@@ -1,0 +1,21 @@
+{
+  "date": "2026-09-07",
+  "nodes": 1,
+  "edges": 0,
+  "orphans": [
+    "/blog/sklad-dverej-kak-ustroen-magazin-vybor"
+  ],
+  "least_linked": [
+    [
+      "/blog/sklad-dverej-kak-ustroen-magazin-vybor",
+      0
+    ]
+  ],
+  "most_linked": [
+    [
+      "/blog/sklad-dverej-kak-ustroen-magazin-vybor",
+      0
+    ]
+  ],
+  "recommendations": []
+}
