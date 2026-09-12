@@ -2,21 +2,10 @@
 
 **Краулинг:** 401 страниц · 2xx 401 · 3xx 0 · 4xx 0 · 5xx 0 · network errors 0
 
-**Issues:** critical 5 · high 15 · medium 239 · low 8
+**Issues:** critical 0 · high 13 · medium 239 · low 8
 
 
-## CRITICAL (5)
-
-
-### psi_lcp_slow_mobile (5)
-
-- `https://xn--b1adafaol8cdkl0m.xn--p1acf/nachalnoe` — LCP mobile=7164ms (порог 2500ms)
-- `https://xn--b1adafaol8cdkl0m.xn--p1acf/dopolnitelnoe` — LCP mobile=5084ms (порог 2500ms)
-- `https://xn--b1adafaol8cdkl0m.xn--p1acf/spetsialnosti` — LCP mobile=20685ms (порог 2500ms)
-- `https://xn--b1adafaol8cdkl0m.xn--p1acf/blog` — LCP mobile=5143ms (порог 2500ms)
-- `https://xn--b1adafaol8cdkl0m.xn--p1acf/faq` — LCP mobile=5281ms (порог 2500ms)
-
-## HIGH (15)
+## HIGH (13)
 
 
 ### description_missing (7)
@@ -37,11 +26,6 @@
 - `https://xn--b1adafaol8cdkl0m.xn--p1acf/works-album.html?id=4` — тот же <title> ещё на 5 стр: https://xn--b1adafaol8cdkl0m.xn--p1acf/works-album.html?id=1 и ещё 4
 - `https://xn--b1adafaol8cdkl0m.xn--p1acf/works-album.html?id=5` — тот же <title> ещё на 5 стр: https://xn--b1adafaol8cdkl0m.xn--p1acf/works-album.html?id=1 и ещё 4
 - `https://xn--b1adafaol8cdkl0m.xn--p1acf/works-album.html?id=6` — тот же <title> ещё на 5 стр: https://xn--b1adafaol8cdkl0m.xn--p1acf/works-album.html?id=1 и ещё 4
-
-### psi_lcp_slow_mobile (2)
-
-- `https://xn--b1adafaol8cdkl0m.xn--p1acf/postuplenie` — LCP mobile=2872ms (порог 2500ms)
-- `https://xn--b1adafaol8cdkl0m.xn--p1acf/kontakty` — LCP mobile=2567ms (порог 2500ms)
 
 ## MEDIUM (239)
 
@@ -307,27 +291,3 @@
 - `https://xn--b1adafaol8cdkl0m.xn--p1acf/product/877-aliot-purple` — desc=67 символов, рекомендуется ≥70
 - `https://xn--b1adafaol8cdkl0m.xn--p1acf/product/878-aliot-mokko` — desc=66 символов, рекомендуется ≥70
 - `https://xn--b1adafaol8cdkl0m.xn--p1acf/product/901-skani-belaya` — desc=66 символов, рекомендуется ≥70
-
-## PageSpeed Insights
-
-
-| URL | Strategy | LCP | INP | CLS | Perf |
-|---|---|---|---|---|---|
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/` | mobile | error | | | |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/` | desktop | 3.97s | — | 0.007 | 78 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/doshkolnoe` | mobile | error | | | |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/doshkolnoe` | desktop | 0.73s | — | 0.008 | 99 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/nachalnoe` | mobile | 7.16s | — | 0.003 | 68 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/nachalnoe` | desktop | 0.74s | — | 0.004 | 96 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/dopolnitelnoe` | mobile | 5.08s | — | 0.005 | 69 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/dopolnitelnoe` | desktop | 0.98s | — | 0.007 | 98 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/spetsialnosti` | mobile | 20.69s | — | 0.000 | 64 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/spetsialnosti` | desktop | 1.00s | — | 0.007 | 98 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/blog` | mobile | 5.14s | — | 0.003 | 68 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/blog` | desktop | 1.01s | — | 0.007 | 97 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/faq` | mobile | 5.28s | — | 0.005 | 75 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/faq` | desktop | 0.74s | — | 0.004 | 96 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/postuplenie` | mobile | 2.87s | — | 0.004 | 88 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/postuplenie` | desktop | 0.98s | — | 0.007 | 98 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/kontakty` | mobile | 2.57s | — | 0.005 | 93 |
-| `https://xn--b1adafaol8cdkl0m.xn--p1acf/kontakty` | desktop | 0.99s | — | 0.007 | 98 |
